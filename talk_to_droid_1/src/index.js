@@ -1,17 +1,19 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+// 1. Import required packages
+const express = require('express');
+const cors = require('cors');
+const {OpenAI} = require ('openai');
+require('dotenv').config();
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// 2, Create Express app
+const app = express();
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+// 3. use middleware
+app.use(cors());
+app.use(express.json());
+
+// 4. Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPEN_AI_API_KEY,
+});
+
+// 5. Create POST ednpoint to handle the chat messages
