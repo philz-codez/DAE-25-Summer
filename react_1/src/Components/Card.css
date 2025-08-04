@@ -1,0 +1,14 @@
+.card {
+  border: solid black 3px;
+  margin: 20px;
+  padding: 15px;
+  background-color: aqua;
+}
+
+h1 {
+  color: blueviolet;
+}
+
+p {
+  color: hotpink;
+}
