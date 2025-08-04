@@ -117,4 +117,7 @@ sendBtn.addEventListener("click", async () => {
 
     const randomReply = droidReplies[Math.floor(Math.random() * droidReplies.length)];
     await typeMessage(randomReply, "bot");
+
+    const messageCount = document.getElementsByClassName("message").length;
+    console.log("Total messages so far:", messageCount);
 });
