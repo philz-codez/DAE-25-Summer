@@ -1,19 +1,12 @@
 console.log("Js file has loaded");
+
 const chatLog = document.getElementById("chat-log");
 const userInput = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-button");
-const droidReplies = [
-    "Beep boop! What do you mean by that?",
-    "Interesting... I want to know more.",
-    "I'll need to update some circuits to understand that.",
-    "Can you rephrase that in binary",
-    "My logic unit is... confused",
-    "Don't know what you mean brotato chip",
-    "01001000 01101001",
-    "How bizzare, it would be an adventure to understand that"
-];
+const stopBtn = document.getElementById("stop-button");
+let abortController = null;
 
-const totalRepliesPlusFive= droidReplies.length + 5;
+const API_KEY = "YOUR_API_KEY_HERE"; // Replace this
 
 function addMessage(sender, text) {
     const message = document.createElement("div");
@@ -30,21 +23,21 @@ function typeMessage(text, sender) {
         chatLog.appendChild(message);
         chatLog.scrollTop = chatLog.scrollHeight;
 
-        let index =0;
+        let index = 0;
         let cursorVisible = true;
 
         const cursor = document.createElement("span");
         cursor.textContent = "|";
-        cursor.style.color = "#0b93f6"
+        cursor.style.color = "#0b93f6";
         cursor.style.fontWeight = "bold";
         cursor.style.marginLeft = "2px";
 
-        message.textContent = `${sender === "user" ? "You": "Droid"}: `;
+        message.textContent = `${sender === "user" ? "You" : "Droid"}: `;
         message.appendChild(cursor);
 
         const blinkInterval = setInterval(() => {
             cursor.style.visibility = cursorVisible ? "hidden" : "visible";
-            cursorVisible - !cursorVisible;
+            cursorVisible = !cursorVisible;
         }, 500);
 
         const typeInterval = setInterval(() => {
@@ -52,31 +45,57 @@ function typeMessage(text, sender) {
                 message.textContent = `${sender === "user" ? "You" : "Droid"}: ` + text.substring(0, index + 1);
                 message.appendChild(cursor);
                 index++;
-                chatLog,scrollTop = chatLog.scrollHeight;
+                chatLog.scrollTop = chatLog.scrollHeight;
             } else {
                 clearInterval(typeInterval);
                 clearInterval(blinkInterval);
                 cursor.style.visibility = "hidden";
                 resolve();
             }
-        }, 50);
+        }, 30);
     });
 }
 
-userInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === "Return") {
-        sendBtn.click();
+async function fetchGeminiReply(promptText) {
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+
+    
+    const requestBody = {
+        contents: [
+            {
+                role: "user",
+                parts: [{ text: promptText }]
+            }
+        ]
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Gemini API error:", errorText);
+            return "Sorry, I couldn't reach my brain circuits. Try again.";
+        }
+
+        const data = await response.json();
+        console.log("Gemini raw response:", data);
+
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        return reply || "Hmm... I'm speechless.";
+    } catch (err) {
+        console.error("Fetch failed:", err);
+        return "I'm having a glitch! Try again later.";    
     }
-});
+}
 
-sendBtn.addEventListener("click", async () => {
-    const userText = userInput.value.trim()
-    if (!userText || userText.length > 200) return;
-
-    addMessage("user", userText);
-    userInput.value = "";
-    userInput.focus();
-
+function showThinkingAnimation() {
     const thinkingMsg = document.createElement("div");
     thinkingMsg.classList.add("message", "bot");
 
@@ -84,7 +103,7 @@ sendBtn.addEventListener("click", async () => {
     thinkingText.textContent = "Droid is thinking";
     thinkingMsg.appendChild(thinkingText);
 
-    const dotsContainer = document.createElement("span")
+    const dotsContainer = document.createElement("span");
     dotsContainer.style.marginLeft = "6px";
 
     const dots = [];
@@ -100,6 +119,7 @@ sendBtn.addEventListener("click", async () => {
         dots.push(dot);
     }
 
+    thinkingMsg.appendChild(dotsContainer);
     chatLog.appendChild(thinkingMsg);
     chatLog.scrollTop = chatLog.scrollHeight;
 
@@ -107,17 +127,25 @@ sendBtn.addEventListener("click", async () => {
     const interval = setInterval(() => {
         dots.forEach(dot => dot.style.opacity = "0.3");
         dots[currentDot].style.opacity = "1";
-        currentDot = (currentDot +1) % dots.length;
+        currentDot = (currentDot + 1) % dots.length;
     }, 400);
 
-    await new Promise((r) => setTimeout(r, 1500));
+    return { thinkingMsg, interval };
+}
+
+sendBtn.addEventListener("click", async () => {
+    const userText = userInput.value.trim();
+    if (!userText || userText.length > 200) return;
+
+    addMessage("user", userText);
+    userInput.value = "";
+    userInput.focus();
+
+    const { thinkingMsg, interval } = showThinkingAnimation();
+
+    const geminiReply = await fetchGeminiReply(userText);
 
     clearInterval(interval);
     thinkingMsg.remove();
-
-    const randomReply = droidReplies[Math.floor(Math.random() * droidReplies.length)];
-    await typeMessage(randomReply, "bot");
-
-    const messageCount = document.getElementsByClassName("message").length;
-    console.log("Total messages so far:", messageCount);
+    await typeMessage(geminiReply, "bot");
 });
