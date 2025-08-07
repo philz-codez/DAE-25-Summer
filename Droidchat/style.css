@@ -107,3 +107,25 @@ header, footer {
 input:focus {
     outline: none;
 }
+
+.message strong {
+    font-weight: bold;
+}
+
+.message em{
+    font-style: italic;
+}
+
+.message code {
+    background-color:#f4f4f4;
+    padding: 2px 4px;
+    font-family: monospace;
+    border-radius: 4px;
+    font-size: 0.95em;
+}
+
+.message a{
+    color: #007bff;
+    text-decoration: underline;
+    word-break: break-word;
+}

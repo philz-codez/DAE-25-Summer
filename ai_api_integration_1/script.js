@@ -11,9 +11,30 @@ const API_KEY = "YOUR_API_KEY_HERE"; // Replace this
 function addMessage(sender, text) {
     const message = document.createElement("div");
     message.classList.add("message", sender);
-    message.textContent = `${sender === "user" ? "You" : "Droid"}: ${text}`;
+    message.innerHTML = `<strong>${sender === "user" ? "You" : "Droid"}:</strong> ${formatMessage(text)}`;
     chatLog.appendChild(message);
     chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function formatMessage(text) {
+    if (!text) return "";
+
+    text = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+    text = text.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+    text = text.replace(/`(.*?)`/g, "<code>$1</code>");
+
+    text = text.replace(/\n/g, "<br>");
+
+    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    return text;
 }
 
 function typeMessage(text, sender) {
@@ -23,17 +44,23 @@ function typeMessage(text, sender) {
         chatLog.appendChild(message);
         chatLog.scrollTop = chatLog.scrollHeight;
 
+        const formattedHTML = formatMessage(text);
+
         let index = 0;
         let cursorVisible = true;
 
         const cursor = document.createElement("span");
         cursor.textContent = "|";
-        cursor.style.color = "#0b93f6";
+        cursor.style.color = "#fff";
         cursor.style.fontWeight = "bold";
-        cursor.style.marginLeft = "2px";
+        cursor.style.marginLeft = "4px";
 
-        message.textContent = `${sender === "user" ? "You" : "Droid"}: `;
+        message.innerHTML = `<strong>${sender === "user" ? "You" : "Droid"}:</strong> `;
         message.appendChild(cursor);
+
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = formattedHTML;
+        const fullText = tempDiv.innerHTML;
 
         const blinkInterval = setInterval(() => {
             cursor.style.visibility = cursorVisible ? "hidden" : "visible";
@@ -41,10 +68,10 @@ function typeMessage(text, sender) {
         }, 500);
 
         const typeInterval = setInterval(() => {
-            if (index < text.length) {
-                message.textContent = `${sender === "user" ? "You" : "Droid"}: ` + text.substring(0, index + 1);
+            if(index < fullText.length) {
+                message.innerHTML = `<strong>${sender === "user" ? "You" : "Droid"}:</strong ` + fullText.substring(0, index+1);
                 message.appendChild(cursor);
-                index++;
+                index++
                 chatLog.scrollTop = chatLog.scrollHeight;
             } else {
                 clearInterval(typeInterval);
@@ -52,7 +79,7 @@ function typeMessage(text, sender) {
                 cursor.style.visibility = "hidden";
                 resolve();
             }
-        }, 30);
+        }, 10);
     });
 }
 
@@ -92,6 +119,19 @@ async function fetchGeminiReply(promptText) {
     } catch (err) {
         console.error("Fetch failed:", err);
         return "I'm having a glitch! Try again later.";    
+    }
+}
+
+async function fetchJoke(){
+    try{
+        const response = await fetch("https://official-joke-api.appspot.com/random_joke");
+        if(!response.ok) throw new Error("Failed to fetch joke");
+
+        const data = await response.json();
+        return `${data.setup} ... ${data.punchline}`;
+    }catch(err) {
+        console.error("Joke fetch error:", err);
+        return "Oops! I couldn't fetch a joke right now.";
     }
 }
 
@@ -143,9 +183,22 @@ sendBtn.addEventListener("click", async () => {
 
     const { thinkingMsg, interval } = showThinkingAnimation();
 
-    const geminiReply = await fetchGeminiReply(userText);
+    let geminiReply;
+
+    if (userText.toLowerCase().includes("tell me a joke")) {
+        geminiReply = await fetchJoke();
+    } else {
+        geminiReply = await fetchGeminiReply(userText);
+    }
 
     clearInterval(interval);
     thinkingMsg.remove();
     await typeMessage(geminiReply, "bot");
+});
+
+userInput.addEventListener("keydown", async (event) => {
+    if(event.key === "Enter"){
+        event.preventDefault();
+        sendBtn.click();
+    }
 });
