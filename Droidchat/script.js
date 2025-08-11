@@ -8,13 +8,66 @@ let abortController = null;
 
 const API_KEY = "YOUR_API_KEY_HERE"; // Replace this
 
-function addMessage(sender, text) {
+function showErrorMessage(text) {
+    addMessage("bot", `⚠️ ${text}`, new Date().toISOString());
+}
+
+function loadMessages() {
+    const saved = localStorage.getItem("droidchat_messages");
+    if (!saved) return;
+
+    try {
+        const messages = JSON.parse(saved);
+        messages.forEach(msg =>{
+            addMessage(msg.sender, msg.text, msg.timestamp, false);
+        });
+    } catch(e) {
+        console.error("Failed to load messages:", e);
+    }
+}
+
+function saveMessageToStorage(sender, text, timestamp) {
+    const saved = localStorage.getItem("droidchat_messages");
+    let messages = saved ? JSON.parse(saved) : [];
+    messages.push({ sender, text, timestamp});
+    localStorage.setItem("droidchat_messages", JSON.stringify(messages));
+}
+
+function addMessage(sender, text, timestamp = null, save = true) {
     const message = document.createElement("div");
     message.classList.add("message", sender);
-    message.innerHTML = `<strong>${sender === "user" ? "You" : "Droid"}:</strong> ${formatMessage(text)}`;
+
+    const content = document.createElement("div");
+
+    // Add the space right inside the label string after the colon
+    const labelSpan = document.createElement("span");
+    labelSpan.innerHTML = `<strong>${sender === "user" ? "You: " : "Droid: "}</strong>`;
+
+    const textSpan = document.createElement("span");
+    textSpan.innerHTML = formatMessage(text);
+
+    content.appendChild(labelSpan);
+    content.appendChild(textSpan);
+
+    message.appendChild(content);
+
+    const ts = timestamp ? new Date(timestamp) : new Date();
+    const timestampDiv = document.createElement("div");
+    timestampDiv.classList.add("timestamp");
+    timestampDiv.textContent = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    message.appendChild(timestampDiv);
+
     chatLog.appendChild(message);
-    chatLog.scrollTop = chatLog.scrollHeight;
+    chatLog.scrollTo({
+        top: chatLog.scrollHeight,
+        behavior: "smooth"
+    });
+
+    if (save) {
+        saveMessageToStorage(sender, text, ts.toISOString());
+    }
 }
+
 
 function formatMessage(text) {
     if (!text) return "";
@@ -38,14 +91,19 @@ function formatMessage(text) {
 }
 
 function typeMessage(text, sender) {
+    // Trim leading spaces and colons from the text to avoid extra colon
+    text = text.trimStart().replace(/^:+/, '').trimStart();
+
     return new Promise((resolve) => {
         const message = document.createElement("div");
         message.classList.add("message", sender);
         chatLog.appendChild(message);
-        chatLog.scrollTop = chatLog.scrollHeight;
+        chatLog.scrollTo({
+            top: chatLog.scrollHeight,
+            behavior: "smooth"
+        });
 
         const formattedHTML = formatMessage(text);
-
         let index = 0;
         let cursorVisible = true;
 
@@ -69,14 +127,25 @@ function typeMessage(text, sender) {
 
         const typeInterval = setInterval(() => {
             if(index < fullText.length) {
-                message.innerHTML = `<strong>${sender === "user" ? "You" : "Droid"}:</strong ` + fullText.substring(0, index+1);
+                message.innerHTML = `<strong>${sender === "user" ? "You" : "Droid"}:</strong> ` + fullText.substring(0, index + 1);
                 message.appendChild(cursor);
                 index++
-                chatLog.scrollTop = chatLog.scrollHeight;
+                chatLog.scrollTo({
+                    top: chatLog.scrollHeight,
+                    behavior: "smooth"
+                });
             } else {
                 clearInterval(typeInterval);
                 clearInterval(blinkInterval);
                 cursor.style.visibility = "hidden";
+
+                const timestamp = document.createElement("div");
+                timestamp.classList.add("timestamp");
+                timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                message.appendChild(timestamp);
+
+                saveMessageToStorage(sender, text, new Date().toISOString());
+
                 resolve();
             }
         }, 10);
@@ -108,7 +177,8 @@ async function fetchGeminiReply(promptText) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error("Gemini API error:", errorText);
-            return "Sorry, I couldn't reach my brain circuits. Try again.";
+            showErrorMessage("Sorry, I couldn't reach my brain circuits.")
+            return null;
         }
 
         const data = await response.json();
@@ -118,7 +188,8 @@ async function fetchGeminiReply(promptText) {
         return reply || "Hmm... I'm speechless.";
     } catch (err) {
         console.error("Fetch failed:", err);
-        return "I'm having a glitch! Try again later.";    
+        showErrorMessage("I'm having a glitch! Try again later.");
+        return null; 
     }
 }
 
@@ -131,7 +202,8 @@ async function fetchJoke(){
         return `${data.setup} ... ${data.punchline}`;
     }catch(err) {
         console.error("Joke fetch error:", err);
-        return "Oops! I couldn't fetch a joke right now.";
+        showErrorMessage("Oops! I couldn't find a joke right now.");
+        return null;
     }
 }
 
@@ -181,6 +253,8 @@ sendBtn.addEventListener("click", async () => {
     userInput.value = "";
     userInput.focus();
 
+    sendBtn.disabled = true;
+
     const { thinkingMsg, interval } = showThinkingAnimation();
 
     let geminiReply;
@@ -193,12 +267,16 @@ sendBtn.addEventListener("click", async () => {
 
     clearInterval(interval);
     thinkingMsg.remove();
-    await typeMessage(geminiReply, "bot");
+    
+    if(geminiReply !== null) {
+        await typeMessage(geminiReply, "bot");
+    }
+    sendBtn.disabled = false
 });
 
 userInput.addEventListener("keydown", async (event) => {
-    if(event.key === "Enter"){
-        event.preventDefault();
-        sendBtn.click();
+    if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();  
+        sendBtn.click();         
     }
 });

@@ -26,16 +26,16 @@
         <section id="chat-container" aria-live="polite" aria-label="Chat conversation">
             
             <div id="chat-log"></div>
-            <input
+            <textarea
                 id="user-input"
-                type="text"
                 placeholder="Type your message here"
                 aria-describedby="input-help"
                 maxlength="200"
+                rows="3"
                 autofocus
                 autocomplete="off"
                 required
-            />
+            /></textarea>
             <button id="send-button" aria-label="Send message">Send</button>
             <p id="input-help" class="sr-only">Press Enter or click Send to send your message.</p>
         </section>
