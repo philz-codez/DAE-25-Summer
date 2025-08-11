@@ -5,8 +5,7 @@ const userInput = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-button");
 const stopBtn = document.getElementById("stop-button");
 let abortController = null;
-
-const API_KEY = "YOUR_API_KEY_HERE"; // Replace this
+const API_KEY = window.API_KEY || "";
 
 function showErrorMessage(text) {
     addMessage("bot", `⚠️ ${text}`, new Date().toISOString());
