@@ -3,7 +3,6 @@ console.log("Js file has loaded");
 const chatLog = document.getElementById("chat-log");
 const userInput = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-button");
-const stopBtn = document.getElementById("stop-button");
 let abortController = null;
 const API_KEY = window.API_KEY || "";
 
@@ -90,10 +89,12 @@ function formatMessage(text) {
 }
 
 function typeMessage(text, sender) {
-    // Trim leading spaces and colons from the text to avoid extra colon
     text = text.trimStart().replace(/^:+/, '').trimStart();
 
-    return new Promise((resolve) => {
+    let typeInterval, blinkInterval;
+    let cancelled = false;
+
+    const promise = new Promise((resolve) => {
         const message = document.createElement("div");
         message.classList.add("message", sender);
         chatLog.appendChild(message);
@@ -119,16 +120,27 @@ function typeMessage(text, sender) {
         tempDiv.innerHTML = formattedHTML;
         const fullText = tempDiv.innerHTML;
 
-        const blinkInterval = setInterval(() => {
+        blinkInterval = setInterval(() => {
             cursor.style.visibility = cursorVisible ? "hidden" : "visible";
             cursorVisible = !cursorVisible;
         }, 500);
 
-        const typeInterval = setInterval(() => {
+        typeInterval = setInterval(() => {
+            if (cancelled) {
+                clearInterval(typeInterval);
+                clearInterval(blinkInterval);
+                cursor.style.visibility = "hidden";
+                // Keep the current partial message content intact here
+                // Optionally, add a timestamp or a note "Stopped" if you want
+                resolve('cancelled');
+                return;
+            }
             if(index < fullText.length) {
+                // Append only the next character instead of resetting innerHTML completely:
+                // But since innerHTML is HTML, better to do substring approach:
                 message.innerHTML = `<strong>${sender === "user" ? "You" : "Droid"}:</strong> ` + fullText.substring(0, index + 1);
                 message.appendChild(cursor);
-                index++
+                index++;
                 chatLog.scrollTo({
                     top: chatLog.scrollHeight,
                     behavior: "smooth"
@@ -140,7 +152,7 @@ function typeMessage(text, sender) {
 
                 const timestamp = document.createElement("div");
                 timestamp.classList.add("timestamp");
-                timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'});
                 message.appendChild(timestamp);
 
                 saveMessageToStorage(sender, text, new Date().toISOString());
@@ -149,9 +161,16 @@ function typeMessage(text, sender) {
             }
         }, 10);
     });
+
+    return {
+        promise,
+        cancel() {
+            cancelled = true;
+        }
+    };
 }
 
-async function fetchGeminiReply(promptText) {
+async function fetchGeminiReply(promptText, signal) {
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
     
@@ -171,6 +190,7 @@ async function fetchGeminiReply(promptText) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(requestBody),
+            signal,
         });
 
         if (!response.ok) {
@@ -186,6 +206,10 @@ async function fetchGeminiReply(promptText) {
         const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         return reply || "Hmm... I'm speechless.";
     } catch (err) {
+        if(err.name === 'AbortError') {
+            console.log("Fetch aborted");
+            throw err;
+        }
         console.error("Fetch failed:", err);
         showErrorMessage("I'm having a glitch! Try again later.");
         return null; 
@@ -244,6 +268,10 @@ function showThinkingAnimation() {
     return { thinkingMsg, interval };
 }
 
+const stopBtn = document.getElementById("stop-button");
+
+let currentTyping = null;
+
 sendBtn.addEventListener("click", async () => {
     const userText = userInput.value.trim();
     if (!userText || userText.length > 200) return;
@@ -253,29 +281,64 @@ sendBtn.addEventListener("click", async () => {
     userInput.focus();
 
     sendBtn.disabled = true;
+    stopBtn.disabled = false;
+
+    abortController = new AbortController();
 
     const { thinkingMsg, interval } = showThinkingAnimation();
 
-    let geminiReply;
+    let geminiReply = null;
 
-    if (userText.toLowerCase().includes("tell me a joke")) {
-        geminiReply = await fetchJoke();
-    } else {
-        geminiReply = await fetchGeminiReply(userText);
+    try {
+        if (userText.toLowerCase().includes("tell me a joke")) {
+            geminiReply = await fetchJoke();
+        } else {
+            geminiReply = await fetchGeminiReply(userText, abortController.signal);
+}
+    } catch (err) {
+        if(err.name === 'AbortError') {
+            showErrorMessage("Response generation stopped by user.")
+        } else {
+            showErrorMessage("Oops, something went wrong!")
+        }
+    } finally {
+        clearInterval(interval)
+        thinkingMsg.remove();
+        abortController = null;
     }
-
-    clearInterval(interval);
-    thinkingMsg.remove();
+    
     
     if(geminiReply !== null) {
-        await typeMessage(geminiReply, "bot");
+        currentTyping = typeMessage(geminiReply, "bot")
+        await currentTyping.promise;
+        currentTyping = null;
     }
-    sendBtn.disabled = false
+
+    sendBtn.disabled = false;
+    stopBtn.disabled = true;
+});
+
+stopBtn.addEventListener("click", () => {
+    if(abortController) {
+        abortController.abort()
+    }
+    if (currentTyping) {
+        currentTyping.cancel();
+        currentTyping = null;
+    }
 });
 
 userInput.addEventListener("keydown", async (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();  
         sendBtn.click();         
+    }
+});
+
+const clearBtn = document.getElementById("clear-button");
+clearBtn.addEventListener("click", () => {
+    if (confirm("Are you sure you want to clear the chat? This cannot be undone.")) {
+        localStorage.removeItem("droidchat_messages");
+        chatLog.innerHTML = "";
     }
 });

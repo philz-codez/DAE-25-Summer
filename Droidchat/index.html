@@ -13,9 +13,8 @@
         <nav role="navigation" aria-label="Main navigation">
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; justify-content: center; align-items: center; gap:8px;">
                 <li>
-                    <a href="https://huggingface.co" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 6px; color: white; text-decoration: none;">
-                        <img src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg" alt="Hugging Face Logo" width="24" height="24" style="background: white; border-radius: 50%; padding: 2px;">
-                        Hugging Face
+                    <a href="https://www.youtube.com/watch?v=R9OHn5ZF4Uo" target="_blank" rel="noopener noreferrer" style="color: white; text-decoration: none; font-weight: bold;">
+                        How AI Chatbots Work (Video Explanation)
                     </a>
                 </li>
             </ul>
@@ -24,19 +23,22 @@
 
     <main role="main">
         <section id="chat-container" aria-live="polite" aria-label="Chat conversation">
-            
             <div id="chat-log"></div>
-            <textarea
-                id="user-input"
-                placeholder="Type your message here"
-                aria-describedby="input-help"
-                maxlength="200"
-                rows="3"
-                autofocus
-                autocomplete="off"
-                required
-            /></textarea>
-            <button id="send-button" aria-label="Send message">Send</button>
+            <div id="input-area">
+                <textarea
+                    id="user-input"
+                    placeholder="Type your message here"
+                    aria-describedby="input-help"
+                    maxlength="200"
+                    rows="3"
+                    autofocus
+                    autocomplete="off"
+                    required
+                ></textarea>
+                <button id="clear-button" aria-label="Clear chat">Clear Chat</button>
+                <button id="send-button" aria-label="Send message">Send</button>
+                <button id="stop-button" aria-label="Stop generating response" disabled>Stop</button>
+            </div>
             <p id="input-help" class="sr-only">Press Enter or click Send to send your message.</p>
         </section>
     </main>
