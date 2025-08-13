@@ -24,16 +24,16 @@
 
     <main role="main">
         <section id="chat-container" aria-live="polite" aria-label="Chat conversation">
-            <div class = "input-gap"></div>
-
-            <div id="conversation-controls" style="display: flex; gap: 8px; align-items: center; margin-bottom:8px;">
+            <div id="top-bar">
                 <select id="conversation-select" aria-label="Select conversation"></select>
                 <button id="new-conversation-btn" aria-label="Start new conversation">New Conversation</button>
-                <button id ="export-chat-btn" aria-label="Export current conversation">Export Chat</button>
                 <button id="delete-conversation-btn">Delete Tab</button>
+                <button id="clear-button" aria-label="Clear chat">Clear Chat</button>
+                <button id ="export-chat-btn" aria-label="Export current conversation">Export Chat</button>
             </div>
 
             <div id="chat-log"></div>
+            
             <div id="input-area">
                 <textarea
                     id="user-input"
@@ -55,7 +55,6 @@
 
     <footer role="contentinfo">
         <p>Software developed and made solely by Phillip Bilenko | Droidchat v 1.0</p>
-        <button id="clear-button" aria-label="Clear chat">Clear Chat</button>
     </footer>
     <script src="config.js"></script>
     <script src="script.js"></script>
