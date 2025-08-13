@@ -9,6 +9,7 @@
 <body>
 
     <header role="banner" class = "site-header">
+        <img src="robot-icon.png" alt="Robot icon" class="robot-logo"/>
         <h1 tabindex="0">Welcome to DroidChat</h1>
         <nav role="navigation" aria-label="Main navigation">
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; justify-content: center; align-items: center; gap:8px;">
@@ -23,6 +24,15 @@
 
     <main role="main">
         <section id="chat-container" aria-live="polite" aria-label="Chat conversation">
+            <div class = "input-gap"></div>
+
+            <div id="conversation-controls" style="display: flex; gap: 8px; align-items: center; margin-bottom:8px;">
+                <select id="conversation-select" aria-label="Select conversation"></select>
+                <button id="new-conversation-btn" aria-label="Start new conversation">New Conversation</button>
+                <button id ="export-chat-btn" aria-label="Export current conversation">Export Chat</button>
+                <button id="delete-conversation-btn">Delete Tab</button>
+            </div>
+
             <div id="chat-log"></div>
             <div id="input-area">
                 <textarea
@@ -35,17 +45,17 @@
                     autocomplete="off"
                     required
                 ></textarea>
-                <button id="clear-button" aria-label="Clear chat">Clear Chat</button>
                 <button id="send-button" aria-label="Send message">Send</button>
                 <button id="stop-button" aria-label="Stop generating response" disabled>Stop</button>
             </div>
-            <p id="input-help" class="sr-only">Press Enter or click Send to send your message.</p>
+            <div class="input-gap"></div>
+            <!-- <p id="input-help" class="sr-only">Press Enter or click Send to send your message.</p> -->
         </section>
     </main>
 
     <footer role="contentinfo">
         <p>Software developed and made solely by Phillip Bilenko | Droidchat v 1.0</p>
-        <img src="robot-icon.png" alt="Robot icon" width="40" height="40"/>
+        <button id="clear-button" aria-label="Clear chat">Clear Chat</button>
     </footer>
     <script src="config.js"></script>
     <script src="script.js"></script>

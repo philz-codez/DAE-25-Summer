@@ -6,11 +6,27 @@ body {
     padding: 0;
 }
 
-header, footer {
+.input-gap {
+    height: 30px;
+}
+
+
+header {
     text-align: center;
     padding: 10px;
     background-color: #121212;
     color: #fff;
+}
+
+footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-left: 20px;
+    gap: 40px;
+    padding: 6px 10px;
+    background-color: #1a1a1a;
+    border-top: 1px solid #333;
 }
 
 #chat-container {
@@ -104,6 +120,8 @@ header, footer {
     border-top: 1px solid #444;
     border-radius: 0 0 8px 8px;
 }
+
+
 
 #user-input {
     flex-grow: 1;
@@ -202,18 +220,39 @@ input:focus {
 }
 
 #clear-button {
-    background-color: #555;
+    padding: 4px 10px;
+    background-color: #444;
+    color: white;
     border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    /* background-color: #444;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
     color: white;
     cursor: pointer;
     transition: background-color 0.2s ease;
     box-shadow:0 2px 6px rgba(0,0,0,0.4);
-    margin-left: 8px;
+    margin-left: 8px; */
 }
 
 #clear-button:hover{
-    background-color: #777;
+    background-color: #666;
+}
+
+.robot-logo {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%
+}
+
+.site-header img {
+    display: flex;
+    align-items: center;
+    gap: 8px
 }

@@ -3,6 +3,9 @@ console.log("Js file has loaded");
 const chatLog = document.getElementById("chat-log");
 const userInput = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-button");
+const conversationSelect = document.getElementById("conversation-select");
+const newConversationBtn = document.getElementById("new-conversation-btn");
+const exportBtn = document.getElementById("export-chat-btn");
 let abortController = null;
 const API_KEY = window.API_KEY || "";
 
@@ -10,26 +13,7 @@ function showErrorMessage(text) {
     addMessage("bot", `⚠️ ${text}`, new Date().toISOString());
 }
 
-function loadMessages() {
-    const saved = localStorage.getItem("droidchat_messages");
-    if (!saved) return;
 
-    try {
-        const messages = JSON.parse(saved);
-        messages.forEach(msg =>{
-            addMessage(msg.sender, msg.text, msg.timestamp, false);
-        });
-    } catch(e) {
-        console.error("Failed to load messages:", e);
-    }
-}
-
-function saveMessageToStorage(sender, text, timestamp) {
-    const saved = localStorage.getItem("droidchat_messages");
-    let messages = saved ? JSON.parse(saved) : [];
-    messages.push({ sender, text, timestamp});
-    localStorage.setItem("droidchat_messages", JSON.stringify(messages));
-}
 
 function addMessage(sender, text, timestamp = null, save = true) {
     const message = document.createElement("div");
@@ -338,7 +322,115 @@ userInput.addEventListener("keydown", async (event) => {
 const clearBtn = document.getElementById("clear-button");
 clearBtn.addEventListener("click", () => {
     if (confirm("Are you sure you want to clear the chat? This cannot be undone.")) {
-        localStorage.removeItem("droidchat_messages");
         chatLog.innerHTML = "";
+
+        const saved = JSON.parse(localStorage.getItem("droidchat_conversations") || "{}");
+        saved[currentConversation] = [];
+        localStorage.setItem("droidchat_conversations", JSON.stringify(saved));
+    }
+});
+
+let currentConversation = "default";
+
+// Load all conversations into dropdown
+function loadConversations() {
+    const saved = JSON.parse(localStorage.getItem("droidchat_conversations") || "{}");
+    conversationSelect.innerHTML = "";
+
+    Object.keys(saved).forEach(conv => {
+        const option = document.createElement("option");
+        option.value = conv;
+        option.textContent = conv;
+        conversationSelect.appendChild(option);
+    });
+
+    // Set the select to currentConversation if it exists
+    if(saved[currentConversation]){
+        conversationSelect.value = currentConversation;
+    } else {
+        // If currentConversation doesn't exist, select the first one
+        const firstKey = Object.keys(saved)[0];
+        currentConversation = firstKey || "default";
+        conversationSelect.value = currentConversation;
+    }
+
+    loadMessages();
+}
+
+// Load messages for the current conversation
+function loadMessages() {
+    chatLog.innerHTML = "";
+    const saved = JSON.parse(localStorage.getItem("droidchat_conversations") || "{}");
+    const messages = saved[currentConversation] || [];
+    messages.forEach(msg => addMessage(msg.sender, msg.text, msg.timestamp, false));
+}
+
+// Save a message to the current conversation
+function saveMessageToStorage(sender, text, timestamp) {
+    const saved = JSON.parse(localStorage.getItem("droidchat_conversations") || "{}");
+    if (!saved[currentConversation]) saved[currentConversation] = [];
+    saved[currentConversation].push({ sender, text, timestamp });
+    localStorage.setItem("droidchat_conversations", JSON.stringify(saved));
+}
+
+// Switch conversation
+conversationSelect.addEventListener("change", () => {
+    currentConversation = conversationSelect.value;
+    loadMessages();
+});
+
+// Create new conversation
+newConversationBtn.addEventListener("click", () => {
+    const name = prompt("Enter a name for the new conversation:");
+    if (!name) return;
+    currentConversation = name;
+
+    const saved = JSON.parse(localStorage.getItem("droidchat_conversations") || "{}");
+    if (!saved[name]) saved[name] = [];
+    localStorage.setItem("droidchat_conversations", JSON.stringify(saved));
+
+    loadConversations();
+});
+
+// Export current conversation
+exportBtn.addEventListener("click", () => {
+    const saved = JSON.parse(localStorage.getItem("droidchat_conversations") || "{}");
+    const messages = saved[currentConversation] || [];
+    if (messages.length === 0) {
+        alert("Nothing to export!");
+        return;
+    }
+
+    const blob = new Blob([JSON.stringify(messages, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `DroidChat-${currentConversation}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+});
+
+// Initial load
+loadConversations();
+
+const deleteConversationBtn = document.getElementById("delete-conversation-btn");
+
+deleteConversationBtn.addEventListener("click", () => {
+    const saved = JSON.parse(localStorage.getItem("droidchat_conversations") || "{}");
+    if(!saved[currentConversation]) return;
+
+    if(confirm(`Are you sure you want to delete conversation "${currentConversation}"? This cannot be undone.`)) {
+        delete saved[currentConversation];
+        localStorage.setItem("droidchat_conversations", JSON.stringify(saved));
+
+        // Switch to first available conversation or default
+        const remaining = Object.keys(saved);
+        currentConversation = remaining[0] || "default";
+        if(!saved[currentConversation]) saved[currentConversation] = [];
+        localStorage.setItem("droidchat_conversations", JSON.stringify(saved));
+
+        loadConversations();
     }
 });
